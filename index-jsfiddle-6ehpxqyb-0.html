@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>JSFiddle 6ehpxqyb</title>
+
+  <style>
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #f4f4f9; font-family: sans-serif; }
+        #test-area { position: relative; width: 100vw; height: 100vh; }
+        /* 模拟UI最小单元图标 (44x44px) */
+        .target {
+            position: absolute;
+            width: 44px;
+            height: 44px;
+            background-color: #007AFF;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            touch-action: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        #info { position: fixed; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 5px 10px; border-radius: 5px; pointer-events: none; }
+        #start-screen { position: fixed; inset: 0; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; padding: 20px; text-align: center; }
+        button { padding: 15px 30px; font-size: 18px; background: #007AFF; color: white; border: none; border-radius: 10px; margin-top: 20px; }
+  </style>
+
+  
+</head>
+<body>
+  <div id="start-screen">
+        <h2>单手操作准确度测试</h2>
+        <p>请仅使用<b>左手大拇指</b>点击出现的蓝色方块。<br>我们将记录你的点击速度与精度。</p>
+        <button onclick="startTest()">开始测试 (共30次)</button>
+    </div>
+
+    <div id="info">剩余次数: <span id="count">30</span></div>
+    <div id="test-area"></div>
+
+  <script>
+    const testArea = document.getElementById('test-area');
+        const countDisplay = document.getElementById('count');
+        const totalTrials = 30;
+        let currentTrial = 0;
+        let startTime;
+        let results = [];
+
+        function startTest() {
+            document.getElementById('start-screen').style.display = 'none';
+            nextTrial();
+        }
+
+        function nextTrial() {
+            if (currentTrial >= totalTrials) {
+                exportResults();
+                return;
+            }
+
+            testArea.innerHTML = '';
+            countDisplay.innerText = totalTrials - currentTrial;
+
+            // 随机位置逻辑：确保图标不会超出屏幕边界
+            const padding = 20;
+            const x = Math.random() * (window.innerWidth - 60 - padding) + padding;
+            const y = Math.random() * (window.innerHeight - 60 - padding) + padding;
+
+            const target = document.createElement('div');
+            target.className = 'target';
+            target.style.left = x + 'px';
+            target.style.top = y + 'px';
+            target.innerHTML = '点击';
+            
+            startTime = performance.now();
+            
+            // 使用 pointerdown 捕捉更准确的触发瞬间
+            target.addEventListener('pointerdown', (e) => {
+                const endTime = performance.now();
+                const reactionTime = endTime - startTime;
+
+                // 计算点击点相对于按钮中心的偏移量
+                const rect = target.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const offsetX = e.clientX - centerX;
+                const offsetY = e.clientY - centerY;
+
+                results.push({
+                    trial: currentTrial + 1,
+                    screenX: x.toFixed(2),
+                    screenY: y.toFixed(2),
+                    timeMs: reactionTime.toFixed(2),
+                    offsetX: offsetX.toFixed(2),
+                    offsetY: offsetY.toFixed(2)
+                });
+
+                currentTrial++;
+                nextTrial();
+            });
+
+            testArea.appendChild(target);
+        }
+
+        function exportResults() {
+            let csv = "试验次数,图标位置X,图标位置Y,反应时间(ms),水平偏移,垂直偏移\n";
+            results.forEach(row => {
+                csv += `${row.trial},${row.screenX},${row.screenY},${row.timeMs},${row.offsetX},${row.offsetY}\n`;
+            });
+
+            const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "点击测试结果.csv";
+            link.click();
+            
+            testArea.innerHTML = "<h2>测试完成！数据已下载</h2>";
+        }
+  </script>
+</body>
+</html>
